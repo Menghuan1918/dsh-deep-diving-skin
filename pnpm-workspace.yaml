@@ -1,0 +1,18 @@
+# pnpm 11 blocks dependency build scripts by default; esbuild (the transform
+# layer under vitest, through vite) needs one to link its platform binary.
+allowBuilds:
+  esbuild: true
+
+# The DSH packages this plugin compiles against ship as prereleases, which the
+# machine-wide pnpm `minimumReleaseAge` policy would otherwise refuse. These are
+# pinned to the exact versions package.json requests.
+minimumReleaseAgeExclude:
+  - '@deepseek-ai/dsh-brand@0.2.0-rc.1'
+  - '@deepseek-ai/dsh-client-locale@0.2.0-rc.1'
+  - '@deepseek-ai/dsh-client-ui-plugin-manager@0.2.0-rc.1'
+  - '@deepseek-ai/dsh-client-ui-slots@0.2.0-rc.1'
+  - '@deepseek-ai/dsh-host-webserver@0.2.0-rc.1'
+  - '@deepseek-ai/dsh-timeout@0.2.0-rc.1'
+  - '@deepseek-ai/dsh-typert-protocol@0.2.0-rc.1'
+  - '@deepseek-ai/dsh-client-ui-renderer@0.2.0-rc.1'
+  - '@deepseek-ai/dsh-client-store@0.2.0-rc.1'

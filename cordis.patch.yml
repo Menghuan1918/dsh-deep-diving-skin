@@ -1,0 +1,26 @@
+# dsh-deep-diving-skin bundle patch: inserts this plugin's single row into the
+# profile roster. Install with
+#
+#   dsh plugin --profile <name> add dsh-deep-diving-skin
+#
+# (or `add link:/abs/path/to/dsh-deep-diving-skin` for a local checkout). The
+# command reconciles the profile's `dsh.profile.bundles` against this package's
+# `dsh.bundle.patch`, so no profile file needs editing by hand.
+#
+# One row on purpose. The loader row's module specifier must be the bare package
+# name: the browser half (`dsh.client` -> exports "./client") is discovered from
+# the row's package manifest, and dsh-client-modules builds one module-table row
+# per bare package name — it rejects a second active row resolving to the same
+# package.
+#
+# The row id below is also half of the `plugins.row.config` slot key the browser
+# half registers as 'dsh-deep-diving-skin#dsh-deep-diving-skin'. Mounting this
+# module under a different row id leaves the skin working but hides its
+# configuration page on the Plugins page.
+#
+# Row config: `trustedHosts: string[]` — reverse-proxy authorities additionally
+# allowed to call /deep-diving-skin/api. Left unset, that API answers only
+# requests whose Host is loopback.
+- insert:
+    - id: dsh-deep-diving-skin
+      name: dsh-deep-diving-skin
