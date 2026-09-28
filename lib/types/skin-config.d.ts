@@ -22,6 +22,8 @@ export declare const UPLOAD_MAX_BYTES: number;
 export declare const TEXT_MAX_CHARS = 200;
 /** Longest accepted CSS color. */
 export declare const COLOR_MAX_CHARS = 64;
+/** Rotation directions, as the settings page offers them. */
+export declare const SPIN_DIRECTIONS: readonly ["clockwise", "counterclockwise"];
 /** Rotation period bounds, in seconds. */
 export declare const SPIN_SECONDS_MIN = 0.2;
 export declare const SPIN_SECONDS_MAX = 60;
@@ -33,24 +35,21 @@ export interface SkinConfig {
     readonly text: string;
     /** CSS color of the running-status line. */
     readonly color: string;
-    /** CSS color of the sweep that crosses the text; empty derives it from {@link color}. */
+    /** CSS color of the sweep that crosses the text. Deliberately independent of {@link color}. */
     readonly shimmerColor: string;
     /** Whether the icon rotates. */
     readonly spin: boolean;
     /** Seconds per full rotation. */
     readonly spinSeconds: number;
+    /** Which way the icon turns. */
+    readonly spinDirection: SpinDirection;
 }
+/** One of {@link SPIN_DIRECTIONS}. */
+export type SpinDirection = (typeof SPIN_DIRECTIONS)[number];
+/** Every stored field, for code that has to compare a write with its answer. */
+export declare const SKIN_FIELDS: readonly ["icon", "text", "color", "shimmerColor", "spin", "spinSeconds", "spinDirection"];
 /** The shipped defaults. */
 export declare const DEFAULT_SKIN: SkinConfig;
-/**
- * Derive the sweep colour from the text colour, so the shipped look never
- * falls back to the theme's own shimmer blue. Uses `color-mix`, which the
- * theme's own sheets already rely on; a browser without it drops the
- * declaration and keeps whatever the theme provided.
- * @param color - the already-validated text colour.
- * @returns a translucent tint of that colour.
- */
-export declare function derivedShimmerColor(color: string): string;
 /**
  * Whether a non-empty icon source may be used as a CSS image.
  * @param value - candidate icon source.

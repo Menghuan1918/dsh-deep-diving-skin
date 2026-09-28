@@ -28,7 +28,7 @@
  * layout degrades to "the skin does nothing" rather than a broken page.
  */
 import { resolveIconSource } from './art.ts'
-import { DEFAULT_SKIN, derivedShimmerColor, type SkinConfig } from '../skin-config.ts'
+import { DEFAULT_SKIN, type SkinConfig } from '../skin-config.ts'
 
 /** The running-status element. */
 export const RUNNING_SELECTOR = '[data-chat-running]'
@@ -190,10 +190,13 @@ export function startSkin(source: ObservableSource<SkinConfig>): () => void {
     const config = source.getSnapshot()
     const icon = resolveIconSource(config.icon)
     const color = usableColor(config.color)
-    // The sweep defaults to a tint of the text colour, so the shipped look
-    // never shows the theme's own shimmer blue against red text.
-    const shimmer = config.shimmerColor === '' ? derivedShimmerColor(color) : usableColor(config.shimmerColor)
-    const animation = config.spin ? `${SPIN_KEYFRAMES} ${String(config.spinSeconds)}s linear infinite` : 'none'
+    const shimmer = usableColor(config.shimmerColor)
+    // `reverse` plays the same keyframes backwards, so one sheet covers both
+    // directions.
+    const direction = config.spinDirection === 'counterclockwise' ? ' reverse' : ''
+    const animation = config.spin
+      ? `${SPIN_KEYFRAMES} ${String(config.spinSeconds)}s linear infinite${direction}`
+      : 'none'
 
     for (const element of document.querySelectorAll<HTMLElement>(RUNNING_SELECTOR)) {
       const svg = element.querySelector('svg')

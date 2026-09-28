@@ -18,11 +18,14 @@ export declare const zh: {
     readonly colorLabel: "颜色";
     readonly colorHint: "作用于这一行文字。";
     readonly shimmerLabel: "高亮扫光";
-    readonly shimmerHint: "扫过文字的那道亮带的颜色。留空则跟随上面的颜色。";
-    readonly shimmerFollow: "跟随文本颜色";
+    readonly shimmerHint: "扫过文字那道亮带的颜色；与文本颜色不同才看得出来。";
+    readonly fieldIgnored: "已保存，但宿主丢弃了：{fields}（重启 dsh web 后重试）";
     readonly spinLabel: "旋转图标";
     readonly spinSecondsLabel: "旋转周期（秒）";
     readonly spinSecondsHint: "0.2 – 60 秒转一圈。";
+    readonly spinDirectionLabel: "旋转方向";
+    readonly spinClockwise: "顺时针";
+    readonly spinCounterclockwise: "逆时针";
     readonly save: "保存";
     readonly saving: "保存中…";
     readonly saved: "已保存";

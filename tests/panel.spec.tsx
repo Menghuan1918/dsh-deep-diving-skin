@@ -136,6 +136,23 @@ describe('configuration page', () => {
     expect(current.container.textContent).toContain(zh.saved)
   })
 
+  it('reports a host that accepted the write but discarded a field', async () => {
+    const current = harness!
+    // An older host answers 200 and drops the fields it does not know. The
+    // real store republishes whatever the host returned, so the stub does too.
+    current.save.mockImplementationOnce(async () => {
+      current.publish({ ...DEFAULT_SKIN })
+      return { ...DEFAULT_SKIN }
+    })
+    typeInto(inputByValue(current.container, DEFAULT_SKIN.text), '祈祷中')
+    await click(buttonByText(current.container, zh.save))
+
+    expect(current.container.textContent).toContain('宿主丢弃了')
+    expect(current.container.textContent).toContain('text')
+    // The draft re-seeds from what the host actually stored.
+    expect(inputByValue(current.container, DEFAULT_SKIN.text)).toBeInstanceOf(HTMLInputElement)
+  })
+
   it('reports a refused save', async () => {
     const current = harness!
     current.save.mockRejectedValueOnce(new Error('icon must be empty or a URL'))

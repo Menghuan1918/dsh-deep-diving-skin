@@ -24,6 +24,9 @@ export const UPLOAD_MAX_BYTES = 1024 * 1024
 export const TEXT_MAX_CHARS = 200
 /** Longest accepted CSS color. */
 export const COLOR_MAX_CHARS = 64
+/** Rotation directions, as the settings page offers them. */
+export const SPIN_DIRECTIONS = ['clockwise', 'counterclockwise'] as const
+
 /** Rotation period bounds, in seconds. */
 export const SPIN_SECONDS_MIN = 0.2
 export const SPIN_SECONDS_MAX = 60
@@ -36,34 +39,35 @@ export interface SkinConfig {
   readonly text: string
   /** CSS color of the running-status line. */
   readonly color: string
-  /** CSS color of the sweep that crosses the text; empty derives it from {@link color}. */
+  /** CSS color of the sweep that crosses the text. Deliberately independent of {@link color}. */
   readonly shimmerColor: string
   /** Whether the icon rotates. */
   readonly spin: boolean
   /** Seconds per full rotation. */
   readonly spinSeconds: number
+  /** Which way the icon turns. */
+  readonly spinDirection: SpinDirection
 }
+
+/** One of {@link SPIN_DIRECTIONS}. */
+export type SpinDirection = (typeof SPIN_DIRECTIONS)[number]
+
+/** Every stored field, for code that has to compare a write with its answer. */
+export const SKIN_FIELDS = [
+  'icon', 'text', 'color', 'shimmerColor', 'spin', 'spinSeconds', 'spinDirection',
+] as const satisfies readonly (keyof SkinConfig)[]
 
 /** The shipped defaults. */
 export const DEFAULT_SKIN: SkinConfig = {
   icon: '',
   text: '少女祈祷中',
   color: '#e60012',
-  shimmerColor: '',
+  // White reads as a gleam over the red text; a tint of the text colour would
+  // be invisible, and the theme's own blue clashes.
+  shimmerColor: '#ffffff',
   spin: true,
   spinSeconds: 3,
-}
-
-/**
- * Derive the sweep colour from the text colour, so the shipped look never
- * falls back to the theme's own shimmer blue. Uses `color-mix`, which the
- * theme's own sheets already rely on; a browser without it drops the
- * declaration and keeps whatever the theme provided.
- * @param color - the already-validated text colour.
- * @returns a translucent tint of that colour.
- */
-export function derivedShimmerColor(color: string): string {
-  return `color-mix(in oklab, ${color} 55%, transparent)`
+  spinDirection: 'clockwise',
 }
 
 /**
@@ -127,9 +131,12 @@ export function normalizeSkinConfig(value: unknown): SkinConfig {
     ? raw.text
     : DEFAULT_SKIN.text
   const color = typeof raw.color === 'string' && isColorValue(raw.color) ? raw.color : DEFAULT_SKIN.color
-  const shimmerColor = typeof raw.shimmerColor === 'string' && (raw.shimmerColor === '' || isColorValue(raw.shimmerColor))
+  const shimmerColor = typeof raw.shimmerColor === 'string' && isColorValue(raw.shimmerColor)
     ? raw.shimmerColor
     : DEFAULT_SKIN.shimmerColor
+  const spinDirection = SPIN_DIRECTIONS.includes(raw.spinDirection as SpinDirection)
+    ? raw.spinDirection as SpinDirection
+    : DEFAULT_SKIN.spinDirection
   return {
     icon,
     text,
@@ -137,6 +144,7 @@ export function normalizeSkinConfig(value: unknown): SkinConfig {
     shimmerColor,
     spin: typeof raw.spin === 'boolean' ? raw.spin : DEFAULT_SKIN.spin,
     spinSeconds: clampSpinSeconds(raw.spinSeconds),
+    spinDirection,
   }
 }
 
@@ -164,11 +172,11 @@ export function skinConfigProblem(value: unknown): string | undefined {
   if (raw.color !== undefined && (typeof raw.color !== 'string' || !isColorValue(raw.color))) {
     return `color must be a non-empty CSS color of at most ${String(COLOR_MAX_CHARS)} characters`
   }
-  if (raw.shimmerColor !== undefined) {
-    if (typeof raw.shimmerColor !== 'string') return 'shimmerColor must be a string'
-    if (raw.shimmerColor !== '' && !isColorValue(raw.shimmerColor)) {
-      return `shimmerColor must be empty or a CSS color of at most ${String(COLOR_MAX_CHARS)} characters`
-    }
+  if (raw.shimmerColor !== undefined && (typeof raw.shimmerColor !== 'string' || !isColorValue(raw.shimmerColor))) {
+    return `shimmerColor must be a non-empty CSS color of at most ${String(COLOR_MAX_CHARS)} characters`
+  }
+  if (raw.spinDirection !== undefined && !SPIN_DIRECTIONS.includes(raw.spinDirection as SpinDirection)) {
+    return `spinDirection must be one of ${SPIN_DIRECTIONS.join(', ')}`
   }
   if (raw.spin !== undefined && typeof raw.spin !== 'boolean') return 'spin must be a boolean'
   if (raw.spinSeconds !== undefined && (typeof raw.spinSeconds !== 'number' || !Number.isFinite(raw.spinSeconds))) {

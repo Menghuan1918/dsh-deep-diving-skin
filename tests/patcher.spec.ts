@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_ICON_URI } from '../src/client/art.ts'
 import { startSkin, type ObservableSource } from '../src/client/patcher.ts'
-import { DEFAULT_SKIN, derivedShimmerColor, type SkinConfig } from '../src/skin-config.ts'
+import { DEFAULT_SKIN, type SkinConfig } from '../src/skin-config.ts'
 
 const ICON_ATTRIBUTE = 'data-dsh-deep-diving-skin-icon'
 const COLOR_PROPERTY = '--dsw-alias-label-deep-diving'
@@ -140,9 +140,10 @@ describe('running-status skin', () => {
     // The screen-reader copy stays the harness's own wording.
     expect(document.querySelector('[role="status"]')!.textContent).toBe('深度求索中...')
     expect(runningElement().style.getPropertyValue(COLOR_PROPERTY)).toBe('#e60012')
-    // The sweep follows the text colour, so it never shows the theme's blue.
-    expect(runningElement().style.getPropertyValue(SHIMMER_COLOR_PROPERTY))
-      .toBe(derivedShimmerColor('#e60012'))
+    // The sweep is its own colour: a tint of the text would be invisible, and
+    // the theme's shimmer blue clashes with red.
+    expect(runningElement().style.getPropertyValue(SHIMMER_COLOR_PROPERTY)).toBe('#ffffff')
+    expect(icon!.style.animation).not.toContain('reverse')
 
     dispose()
   })
@@ -153,13 +154,15 @@ describe('running-status skin', () => {
       text: '祈祷中',
       color: '#3366ff',
       shimmerColor: '#ffd400',
-      spin: false,
+      spin: true,
       spinSeconds: 1,
+      spinDirection: 'counterclockwise',
     }
     const dispose = start(sourceOf(custom).source)
 
     expect(iconElement()!.style.backgroundImage).toBe(`url(${custom.icon})`)
-    expect(iconElement()!.style.animation).toBe('none')
+    // One keyframes sheet covers both directions via the animation shorthand.
+    expect(iconElement()!.style.animation).toContain('reverse')
     expect(visibleLabel().textContent).toBe('祈祷中，用时 16分0秒...')
     expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe('祈祷中，用时 16分0秒...')
     expect(runningElement().style.getPropertyValue(COLOR_PROPERTY)).toBe('#3366ff')

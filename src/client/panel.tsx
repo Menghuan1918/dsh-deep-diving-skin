@@ -6,7 +6,7 @@
  */
 import { useState, type ChangeEvent, type ReactNode } from 'react'
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
-import { DEFAULT_SKIN, SKIN_NS, UPLOAD_MAX_BYTES, type SkinConfig } from '../skin-config.ts'
+import { DEFAULT_SKIN, SKIN_FIELDS, SKIN_NS, SPIN_DIRECTIONS, UPLOAD_MAX_BYTES, type SkinConfig } from '../skin-config.ts'
 import { resolveIconSource } from './art.ts'
 import type { ObservableSource } from './patcher.ts'
 
@@ -31,7 +31,8 @@ export type SkinPanelProps = {
 
 type SaveState =
   | { readonly kind: 'idle' }
-  | { readonly kind: 'saving' | 'saved' }
+  | { readonly kind: 'saving' }
+  | { readonly kind: 'saved'; readonly ignored: readonly string[] }
   | { readonly kind: 'failed'; readonly detail: string }
 
 /** Read one file as a data URI. */
@@ -62,14 +63,6 @@ function hexColor(value: string): string {
 }
 
 /**
- * The colour a picker shows for a field that may be empty. An empty sweep
- * follows the text colour, so the picker shows that rather than a placeholder.
- */
-function pickerColor(value: string, fallback: string): string {
-  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback
-}
-
-/**
  * Render the settings form.
  * @param props - the slot props plus the injected settings face.
  * @returns the row's one-line description, or the form.
@@ -95,11 +88,16 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
     setState({ kind: 'idle' })
   }
 
-  const commit = async (write: () => Promise<SkinConfig>): Promise<void> => {
+  /**
+   * Write, then compare what came back with what was sent. A host older than
+   * the field list answers 200 and drops what it does not know, which would
+   * otherwise look like a save that silently did nothing.
+   */
+  const commit = async (sent: SkinConfig, write: () => Promise<SkinConfig>): Promise<void> => {
     setState({ kind: 'saving' })
     try {
-      await write()
-      setState({ kind: 'saved' })
+      const accepted = await write()
+      setState({ kind: 'saved', ignored: SKIN_FIELDS.filter(field => accepted[field] !== sent[field]) })
     } catch (error) {
       setState({ kind: 'failed', detail: failureText(error) })
     }
@@ -207,28 +205,15 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
               className="dds-color"
               type="color"
               aria-label={t('shimmerLabel')}
-              value={pickerColor(draft.shimmerColor, hexColor(draft.color))}
+              value={hexColor(draft.shimmerColor)}
               onChange={(event) => { edit({ shimmerColor: event.target.value }) }}
             />
             <input
               className="dds-input"
               type="text"
               value={draft.shimmerColor}
-              placeholder={t('shimmerFollow')}
               onChange={(event) => { edit({ shimmerColor: event.target.value }) }}
             />
-            {draft.shimmerColor === ''
-              ? null
-              : (
-                <button
-                  className="dds-button"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => { edit({ shimmerColor: '' }) }}
-                >
-                  {t('shimmerFollow')}
-                </button>
-              )}
           </div>
           <p className="dds-hint">{t('shimmerHint')}</p>
         </div>
@@ -256,6 +241,20 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
           />
         </label>
         <p className="dds-hint">{t('spinSecondsHint')}</p>
+        <label className="dds-row">
+          <span className="dds-hint">{t('spinDirectionLabel')}</span>
+          <select
+            className="dds-input dds-input-number"
+            value={draft.spinDirection}
+            onChange={(event) => { edit({ spinDirection: event.target.value as SkinConfig['spinDirection'] }) }}
+          >
+            {SPIN_DIRECTIONS.map(direction => (
+              <option key={direction} value={direction}>
+                {direction === 'clockwise' ? t('spinClockwise') : t('spinCounterclockwise')}
+              </option>
+            ))}
+          </select>
+        </label>
       </section>
 
       <div className="dds-actions">
@@ -263,7 +262,7 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
           className="dds-button dds-button-primary"
           type="button"
           disabled={busy}
-          onClick={() => { void commit(() => save(draft)) }}
+          onClick={() => { void commit(draft, () => save(draft)) }}
         >
           {busy ? t('saving') : t('save')}
         </button>
@@ -271,11 +270,20 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
           className="dds-button"
           type="button"
           disabled={busy}
-          onClick={() => { setDraft({ ...DEFAULT_SKIN }); void commit(() => reset()) }}
+          onClick={() => { setDraft({ ...DEFAULT_SKIN }); void commit({ ...DEFAULT_SKIN }, () => reset()) }}
         >
           {t('resetAll')}
         </button>
-        {state.kind === 'saved' ? <span className="dds-status dds-status-ok">{t('saved')}</span> : null}
+        {state.kind === 'saved' && state.ignored.length === 0
+          ? <span className="dds-status dds-status-ok">{t('saved')}</span>
+          : null}
+        {state.kind === 'saved' && state.ignored.length > 0
+          ? (
+            <span className="dds-status dds-status-error">
+              {t('fieldIgnored', { fields: state.ignored.join(', ') })}
+            </span>
+          )
+          : null}
         {state.kind === 'failed'
           ? <span className="dds-status dds-status-error">{t('saveFailed')}{state.detail}</span>
           : null}
