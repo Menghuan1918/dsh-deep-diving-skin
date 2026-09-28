@@ -10,6 +10,14 @@
     "touhou"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Menghuan1918/dsh-deep-diving-skin.git"
+  },
+  "homepage": "https://github.com/Menghuan1918/dsh-deep-diving-skin#readme",
+  "bugs": {
+    "url": "https://github.com/Menghuan1918/dsh-deep-diving-skin/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -48,7 +56,8 @@
     "build": "tsc -p tsconfig.build.json && tsdown",
     "typecheck": "tsc --noEmit",
     "test": "pnpm build && vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "pnpm run build"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.4",
