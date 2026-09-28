@@ -23,7 +23,7 @@ export function skinConfigPath(home: string = resolveDshHome()): string {
 
 /**
  * Read the settings document. A missing, unreadable, or malformed document
- * resolves to the shipped preset field by field, so the skin always has a
+ * resolves to the defaults field by field, so there is always a usable
  * usable configuration.
  * @param file - absolute document path.
  * @returns the stored configuration, or the defaults.
@@ -33,7 +33,7 @@ export function readSkinConfig(file: string): SkinConfig {
     return normalizeSkinConfig(JSON.parse(readFileSync(file, 'utf8')))
   } catch {
     // Absent is the ordinary first-run case; unreadable or malformed joins it,
-    // because the shipped preset is always a usable configuration.
+    // because the defaults are always a usable configuration.
     return { ...DEFAULT_SKIN }
   }
 }

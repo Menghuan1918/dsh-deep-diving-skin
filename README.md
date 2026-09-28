@@ -1,6 +1,8 @@
+<img src="icon.svg" width="28" alt="">
+
 # dsh-deep-diving-skin
 
-Replace the icon, text and colour of the DeepSeek Harness running-status line — the one reading 「深度求索中，用时 16分0秒…」. Ships the Touhou loading screen by default: a spinning taiji, 「少女祈祷中」, in red.
+Replaces the icon, text and colour of the DeepSeek Harness running-status line — the one reading 「深度求索中，用时 16分0秒…」. Defaults: a rotating taiji icon, the text 「少女祈祷中」, and red.
 
 ![preview](docs/preview.png)
 
@@ -12,7 +14,7 @@ From Git:
 dsh plugin --profile web add github:Menghuan1918/dsh-deep-diving-skin
 ```
 
-Restart `dsh web` once (the host half serves the settings route), then reload the page.
+Restart `dsh web` once (the host half serves the settings route), then **reload the page** — a tab opened before the restart keeps the old client and shows no change.
 
 <!-- INSTALL-GUIDE:START — 图文安装说明待填 / paste the walkthrough with screenshots here -->
 
@@ -20,7 +22,10 @@ Restart `dsh web` once (the host half serves the settings route), then reload th
 
 ## Settings
 
-Left sidebar → **Plugins** → `dsh-deep-diving-skin` → the configure control on its row.
+Two entry points, one page:
+
+- Left sidebar → **Plugins** → `dsh-deep-diving-skin` → the configure control on its row.
+- **Settings** → **Running status**.
 
 | Field | Meaning |
 |---|---|

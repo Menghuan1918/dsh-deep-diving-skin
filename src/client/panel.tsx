@@ -1,12 +1,11 @@
 /**
- * The plugin's configuration page, registered at `plugins.row.config` so it
- * opens from the plugin's row on the Plugins page (a left-sidebar panel in
- * DSH 0.2.x). The same component answers `view: 'summary'` with the one-line
- * description that page shows for a row without one.
+ * The plugin's settings page. One component serves both registration sites:
+ * the Plugins page asks for `view: 'summary'` (its one-line description) or
+ * `view: 'page'` (the form), and the Settings section renders the form alone.
+ * Styling comes from the injected `dds-` stylesheet in `styles.ts`.
  */
-import { useState, type ChangeEvent, type CSSProperties, type ReactNode } from 'react'
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
+import { useState, type ChangeEvent, type ReactNode } from 'react'
+import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import { DEFAULT_SKIN, SKIN_NS, UPLOAD_MAX_BYTES, type SkinConfig } from '../skin-config.ts'
 import { resolveIconSource } from './art.ts'
 import type { ObservableSource } from './patcher.ts'
@@ -17,31 +16,23 @@ export interface SkinInjected {
   readonly hooks: { readonly config: ObservableSource<SkinConfig> }
   /** Persist a configuration and republish it. */
   readonly save: (patch: Partial<SkinConfig>) => Promise<SkinConfig>
-  /** Persist the shipped preset and republish it. */
+  /** Persist the shipped defaults and republish them. */
   readonly reset: () => Promise<SkinConfig>
 }
 
-/** Complete props of the registered page. */
-export type SkinPanelProps = PropsRuntime<'plugins.row.config'> & InjectFace<SkinInjected> & PropsLocale<typeof SKIN_NS>
+/**
+ * Props this component reads. `view` is absent when the Settings section
+ * mounts it — that host always wants the form — so it stays optional rather
+ * than being re-typed per slot.
+ */
+export type SkinPanelProps = {
+  readonly view?: 'summary' | 'page' | undefined
+} & InjectFace<SkinInjected> & PropsLocale<typeof SKIN_NS>
 
 type SaveState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'saving' | 'saved' }
   | { readonly kind: 'failed'; readonly detail: string }
-
-const styles = {
-  wrap: { display: 'flex', flexDirection: 'column', gap: '14px', maxWidth: '640px', color: 'var(--dsw-alias-label-primary, inherit)' },
-  field: { display: 'flex', flexDirection: 'column', gap: '4px' },
-  label: { fontSize: '13px', fontWeight: 600 },
-  hint: { margin: 0, color: 'var(--dsw-alias-label-tertiary, #888)', fontSize: '12px', lineHeight: '18px' },
-  row: { display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' },
-  input: { font: 'inherit', padding: '4px 8px', color: 'inherit', border: '1px solid var(--dsw-alias-border-l2, #555)', borderRadius: '6px', background: 'var(--dsw-alias-bg-layer-1, transparent)' },
-  preview: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', overflow: 'hidden' },
-  previewImage: { width: '28px', height: '28px', objectFit: 'contain' },
-  button: { font: 'inherit', cursor: 'pointer', padding: '4px 12px', color: 'inherit', border: '1px solid var(--dsw-alias-border-l2, #555)', borderRadius: '6px', background: 'var(--dsw-alias-bg-layer-1, transparent)' },
-  ok: { color: 'var(--dsw-alias-state-success-primary, #3c3)', fontSize: '13px' },
-  error: { color: 'var(--dsw-alias-state-error-primary, #c33)', fontSize: '13px' },
-} satisfies Record<string, CSSProperties>
 
 /** Read one file as a data URI. */
 export function toDataUrl(file: File): Promise<string> {
@@ -71,9 +62,9 @@ function hexColor(value: string): string {
 }
 
 /**
- * Render the plugin's row configuration page.
- * @param props - composed slot props and the injected settings face.
- * @returns the settings form, or the row's one-line description.
+ * Render the settings form.
+ * @param props - the slot props plus the injected settings face.
+ * @returns the row's one-line description, or the form.
  */
 export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): ReactNode {
   const config = useConfig(current => current)
@@ -82,8 +73,8 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
   const [state, setState] = useState<SaveState>({ kind: 'idle' })
 
   // Re-seed the draft when the stored configuration moves under us (the first
-  // read landing, or another writer). Editing state is left untouched because
-  // only the snapshot identity, not the keystrokes, drives this branch.
+  // read landing, or another writer). In-progress edits survive because only
+  // the snapshot identity, not the keystrokes, drives this branch.
   if (seeded !== config) {
     setSeeded(config)
     setDraft(config)
@@ -124,34 +115,43 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
     )
   }
 
-  const dataIcon = draft.icon.startsWith('data:')
   const busy = state.kind === 'saving'
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.field}>
-        <span style={styles.label}>{t('title')}</span>
-        <p style={styles.hint}>{t('intro')}</p>
+    <div className="dds-page">
+      <div className="dds-field">
+        <span className="dds-card-title">{t('title')}</span>
+        <p className="dds-hint">{t('intro')}</p>
       </div>
 
-      <div style={styles.field}>
-        <span style={styles.label}>{t('iconLabel')}</span>
-        <div style={styles.row}>
-          <span style={styles.preview}>
-            <img style={styles.previewImage} src={resolveIconSource(draft.icon)} alt={t('iconPreview')} />
+      <section className="dds-card">
+        <span className="dds-label">{t('iconLabel')}</span>
+        <div className="dds-row">
+          <span className="dds-preview">
+            <img className="dds-preview-image" src={resolveIconSource(draft.icon)} alt={t('iconPreview')} />
           </span>
-          <input type="file" accept="image/svg+xml,image/gif,image/webp,image/png" onChange={onFile} />
-          {draft.icon === ''
-            ? null
-            : <button type="button" style={styles.button} onClick={() => { edit({ icon: '' }) }}>{t('iconClear')}</button>}
+          <input
+            className="dds-picker"
+            type="file"
+            accept="image/svg+xml,image/gif,image/webp,image/png"
+            onChange={onFile}
+          />
+          <button
+            className="dds-button"
+            type="button"
+            disabled={busy || draft.icon === ''}
+            onClick={() => { edit({ icon: '' }) }}
+          >
+            {t('iconClear')}
+          </button>
         </div>
-        {dataIcon
-          ? <p style={styles.hint}>{t('iconIsData', { kb: kilobytes(draft.icon.length) })}</p>
+        {draft.icon.startsWith('data:')
+          ? <p className="dds-hint">{t('iconIsData', { kb: kilobytes(draft.icon.length) })}</p>
           : (
-            <label style={styles.field}>
-              <span style={styles.hint}>{t('iconUrlLabel')}</span>
+            <label className="dds-field">
+              <span className="dds-hint">{t('iconUrlLabel')}</span>
               <input
-                style={styles.input}
+                className="dds-input"
                 type="text"
                 value={draft.icon}
                 placeholder={t('iconUrlPlaceholder')}
@@ -159,51 +159,54 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
               />
             </label>
           )}
-        <p style={styles.hint}>{t('iconHint')}</p>
-      </div>
+        <p className="dds-hint">{t('iconHint')}</p>
+      </section>
 
-      <label style={styles.field}>
-        <span style={styles.label}>{t('textLabel')}</span>
-        <input
-          style={styles.input}
-          type="text"
-          value={draft.text}
-          onChange={(event) => { edit({ text: event.target.value }) }}
-        />
-        <span style={styles.hint}>{t('textHint')}</span>
-      </label>
-
-      <div style={styles.field}>
-        <span style={styles.label}>{t('colorLabel')}</span>
-        <div style={styles.row}>
+      <section className="dds-card">
+        <label className="dds-field">
+          <span className="dds-label">{t('textLabel')}</span>
           <input
-            type="color"
-            value={hexColor(draft.color)}
-            onChange={(event) => { edit({ color: event.target.value }) }}
-          />
-          <input
-            style={styles.input}
+            className="dds-input"
             type="text"
-            value={draft.color}
-            onChange={(event) => { edit({ color: event.target.value }) }}
+            value={draft.text}
+            onChange={(event) => { edit({ text: event.target.value }) }}
           />
+        </label>
+        <p className="dds-hint">{t('textHint')}</p>
+        <div className="dds-field">
+          <span className="dds-label">{t('colorLabel')}</span>
+          <div className="dds-row">
+            <input
+              className="dds-color"
+              type="color"
+              aria-label={t('colorLabel')}
+              value={hexColor(draft.color)}
+              onChange={(event) => { edit({ color: event.target.value }) }}
+            />
+            <input
+              className="dds-input"
+              type="text"
+              value={draft.color}
+              onChange={(event) => { edit({ color: event.target.value }) }}
+            />
+          </div>
+          <p className="dds-hint">{t('colorHint')}</p>
         </div>
-        <p style={styles.hint}>{t('colorHint')}</p>
-      </div>
+      </section>
 
-      <div style={styles.field}>
-        <label style={styles.row}>
+      <section className="dds-card">
+        <label className="dds-row">
           <input
             type="checkbox"
             checked={draft.spin}
             onChange={(event) => { edit({ spin: event.target.checked }) }}
           />
-          <span style={styles.label}>{t('spinLabel')}</span>
+          <span className="dds-label">{t('spinLabel')}</span>
         </label>
-        <label style={styles.row}>
-          <span style={styles.hint}>{t('spinSecondsLabel')}</span>
+        <label className="dds-row">
+          <span className="dds-hint">{t('spinSecondsLabel')}</span>
           <input
-            style={styles.input}
+            className="dds-input dds-input-number"
             type="number"
             min={0.2}
             max={60}
@@ -212,23 +215,30 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
             onChange={(event) => { edit({ spinSeconds: Number(event.target.value) }) }}
           />
         </label>
-        <p style={styles.hint}>{t('spinSecondsHint')}</p>
-      </div>
+        <p className="dds-hint">{t('spinSecondsHint')}</p>
+      </section>
 
-      <div style={styles.row}>
-        <button type="button" style={styles.button} disabled={busy} onClick={() => { void commit(() => save(draft)) }}>
+      <div className="dds-actions">
+        <button
+          className="dds-button dds-button-primary"
+          type="button"
+          disabled={busy}
+          onClick={() => { void commit(() => save(draft)) }}
+        >
           {busy ? t('saving') : t('save')}
         </button>
         <button
+          className="dds-button"
           type="button"
-          style={styles.button}
           disabled={busy}
           onClick={() => { setDraft({ ...DEFAULT_SKIN }); void commit(() => reset()) }}
         >
           {t('resetAll')}
         </button>
-        {state.kind === 'saved' ? <span style={styles.ok}>{t('saved')}</span> : null}
-        {state.kind === 'failed' ? <span style={styles.error}>{t('saveFailed')}{state.detail}</span> : null}
+        {state.kind === 'saved' ? <span className="dds-status dds-status-ok">{t('saved')}</span> : null}
+        {state.kind === 'failed'
+          ? <span className="dds-status dds-status-error">{t('saveFailed')}{state.detail}</span>
+          : null}
       </div>
     </div>
   )

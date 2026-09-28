@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="dsh-deep-diving-skin">
+  <title>dsh-deep-diving-skin</title>
+  <circle cx="50" cy="50" r="49" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+  <path d="M50 1A49 49 0 0 0 50 99A24.5 24.5 0 0 0 50 50A24.5 24.5 0 0 1 50 1Z" fill="#e60012"/>
+  <circle cx="50" cy="25.5" r="8" fill="#e60012"/>
+  <circle cx="50" cy="74.5" r="8" fill="#ffffff"/>
+</svg>

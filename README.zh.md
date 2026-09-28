@@ -1,6 +1,8 @@
+<img src="icon.svg" width="28" alt="">
+
 # dsh-deep-diving-skin
 
-替换 DeepSeek Harness 运行状态行的图标、文本和颜色——就是那一行「深度求索中，用时 16分0秒…」。默认附带东方 project 加载画面：旋转的太极 + 「少女祈祷中」 + 红色。
+替换 DeepSeek Harness 运行状态行的图标、文本和颜色——就是那一行「深度求索中，用时 16分0秒…」。默认图标是旋转太极，默认文本「少女祈祷中」，默认颜色为红色。
 
 ![效果图](docs/preview.png)
 
@@ -12,7 +14,7 @@
 dsh plugin --profile web add github:Menghuan1918/dsh-deep-diving-skin
 ```
 
-重启一次 `dsh web`（宿主半边负责设置路由），然后刷新页面。
+重启一次 `dsh web`（宿主半边负责设置路由），然后**刷新页面**——重启前打开的标签页仍用着旧的客户端，看不到变化。
 
 <!-- INSTALL-GUIDE:START — 图文安装说明待填：在此处粘贴截图与分步说明 -->
 
@@ -20,7 +22,10 @@ dsh plugin --profile web add github:Menghuan1918/dsh-deep-diving-skin
 
 ## 设置
 
-左侧边栏 → **插件** → `dsh-deep-diving-skin` → 那一行的配置入口。
+两个入口，同一个页面：
+
+- 左侧边栏 → **插件** → `dsh-deep-diving-skin` → 那一行的配置入口。
+- **设置** → **运行状态**。
 
 | 字段 | 说明 |
 |---|---|

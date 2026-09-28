@@ -16,3 +16,4 @@ minimumReleaseAgeExclude:
   - '@deepseek-ai/dsh-typert-protocol@0.2.0-rc.1'
   - '@deepseek-ai/dsh-client-ui-renderer@0.2.0-rc.1'
   - '@deepseek-ai/dsh-client-store@0.2.0-rc.1'
+  - '@deepseek-ai/dsh-client-ui-settings@0.2.0-rc.1'

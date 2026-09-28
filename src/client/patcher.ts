@@ -1,33 +1,41 @@
 /**
  * The running-status skin.
  *
- * DSH 0.2.x renders the running indicator inline in `ChatView` rather than
- * through a slot, and its copy belongs to a locale namespace another plugin
- * already owns (`LocaleRuntime.register` throws on an occupied (namespace,
- * locale)). A browser plugin therefore has exactly one lever: edit the
- * rendered element. This module owns that edit and nothing else.
+ * DSH renders the running indicator inline in `ChatView` rather than through a
+ * slot, and its copy belongs to a locale namespace another plugin already owns
+ * (`LocaleRuntime.register` throws on an occupied (namespace, locale)). A
+ * browser plugin therefore has exactly one lever: edit the rendered element.
+ * This module owns that edit and nothing else.
  *
- * The markup it targets (verified against the shipped dsh 0.2.0-rc.1 bundle):
+ * The element it targets, as the running build renders it:
  *
- *   <div class="<hash>_running" data-chat-running>
- *     <span role="status" …>深度求索中...</span>          ← accessibility copy, left alone
- *     <span class="<hash>_runningDivider" …></span>
- *     <span class="<hash>_runningContent">
- *       <span class="<hash>_runningIcon"><svg …/></span>   ← the only <svg> inside
- *       <span class="<hash>_runningText" data-text-shimmer>深度求索中，用时 16分0秒...</span>
- *     </span>
- *   </div>
+ *   <div data-chat-running>
+ *     <span role="status" …>深度求索中...</span>            ← the bare phrase, read (never written)
+ *     <span class="…_runningDivider" …></span>
+ *     <span class="…_runningContent">
+ *       <span class="…_runningIcon"><svg …/></span>          ← hidden while the skin is on
+ *       <span class="…_runningText" data-shimmer>            ← the shimmer root
+ *         <span class="…_content"><span class="…_text">深度求索中，用时 2分24秒...</span></span>
+ *         <span class="…_decoration"><span class="…_sweep"><span class="…_content …_highlight">
+ *           <span class="…_text" data-shimmer-text="深度求索中，用时 2分24秒..."></span>
+ *
+ * The label exists twice: once as the visible span's text, and once as the
+ * `data-shimmer-text` attribute of the highlight copy, which CSS paints with
+ * `content: attr(data-shimmer-text)`. Both are rewritten, so the sweep cannot
+ * draw the old phrase over the new one.
  *
  * Every step is a no-op when the markup is not what it expects, so a changed
- * DSH layout degrades to "the skin does nothing" rather than a broken page.
+ * layout degrades to "the skin does nothing" rather than a broken page.
  */
 import { resolveIconSource } from './art.ts'
 import { DEFAULT_SKIN, type SkinConfig } from '../skin-config.ts'
 
 /** The running-status element. */
 export const RUNNING_SELECTOR = '[data-chat-running]'
-/** The visible label, carrying the localization's full sentence. */
-const TEXT_SELECTOR = '[data-text-shimmer]'
+/** The shimmer root: its parent is the row holding the icon and the label. */
+const SHIMMER_SELECTOR = '[data-shimmer]'
+/** The attribute the highlight copy paints its text from. */
+const SHIMMER_TEXT_ATTRIBUTE = 'data-shimmer-text'
 /** The visually hidden copy of the bare "deep diving" phrase. */
 const STATUS_TEXT_SELECTOR = '[role="status"]'
 /** Marks the icon node this plugin inserted. */
@@ -53,6 +61,13 @@ export interface ObservableSource<T> {
    * @returns the disposer removing this listener.
    */
   subscribe(listener: () => void): () => void
+}
+
+/** One value this plugin wrote, and what it replaced. */
+interface Written {
+  readonly written: string
+  readonly original: string
+  readonly replacement: string
 }
 
 function ensureStyleTag(): HTMLStyleElement {
@@ -83,8 +98,26 @@ function iconNode(content: Element): HTMLElement {
 }
 
 /**
+ * The row holding the built-in icon and the label: the nearest ancestor of the
+ * icon that is a direct child of the running element, else the shimmer root's
+ * parent.
+ * @param element - running-status element.
+ * @param svg - the built-in icon glyph, when present.
+ * @returns the row to insert the replacement icon into.
+ */
+function contentRow(element: Element, svg: SVGElement | null): Element | null {
+  if (svg !== null) {
+    let node: Element | null = svg.parentElement
+    while (node !== null && node.parentElement !== element) node = node.parentElement
+    if (node !== null) return node
+  }
+  const shimmer = element.querySelector(SHIMMER_SELECTOR)
+  return shimmer === null ? null : shimmer.parentElement
+}
+
+/**
  * Accept a configured colour only when the browser parses it, so a typo in the
- * settings file shows the shipped red instead of an unset colour.
+ * settings file shows the default instead of an unset colour.
  * @param value - configured CSS colour.
  * @returns the configured colour, or the shipped default.
  */
@@ -97,28 +130,36 @@ function usableColor(value: string): string {
 }
 
 /**
- * Replace the bare phrase at the head of the visible label, keeping the
- * elapsed-time suffix the harness appends. React rewrites that text node on
- * every clock tick, so this is re-applied from the mutation observer.
+ * Replace the bare phrase at the head of one string, keeping the elapsed-time
+ * suffix. React rewrites both copies on every clock tick, so this is re-applied
+ * from the mutation observer.
+ * @param node - element the value belongs to.
+ * @param heading - localized phrase to replace, as the harness wrote it.
+ * @param replacement - configured text.
+ * @param read - read the current value.
+ * @param write - write a replaced value.
+ * @param written - records of this plugin's own writes, for idempotence and restore.
  */
-function patchText(
-  text: Element,
+function patchSlot(
+  node: Element,
   heading: string,
   replacement: string,
-  written: Map<Element, { written: string; original: string; replacement: string }>,
+  read: () => string,
+  write: (next: string) => void,
+  written: Map<Element, Written>,
 ): void {
-  const onScreen = text.textContent ?? ''
-  const previous = written.get(text)
+  const onScreen = read()
+  const previous = written.get(node)
   const ours = previous !== undefined && previous.written === onScreen
   if (ours && previous.replacement === replacement) return
-  // Text the harness last wrote. While our own write still stands, the heading
-  // is no longer on screen, so the previous record supplies it.
+  // The string the harness last wrote. While our own write still stands, the
+  // heading is no longer on screen, so the previous record supplies it.
   const current = ours ? previous.original : onScreen
   if (heading === '' || !current.startsWith(heading)) return
   const desired = `${replacement}${current.slice(heading.length)}`
   if (desired === onScreen) return
-  written.set(text, { written: desired, original: current, replacement })
-  text.textContent = desired
+  written.set(node, { written: desired, original: current, replacement })
+  write(desired)
 }
 
 /**
@@ -129,9 +170,10 @@ function patchText(
  */
 export function startSkin(source: ObservableSource<SkinConfig>): () => void {
   const style = ensureStyleTag()
-  const hiddenSvgs = new Map<SVGElement, string>()
+  const hidden = new Map<HTMLElement | SVGElement, string>()
   const tinted = new Map<HTMLElement, string>()
-  const written = new Map<Element, { written: string; original: string; replacement: string }>()
+  const writtenText = new Map<Element, Written>()
+  const writtenAttribute = new Map<Element, Written>()
   // The exact source and animation already on a node. Reading them back would
   // compare against the CSSOM's own serialization instead of what was set.
   const iconStates = new WeakMap<Element, string>()
@@ -145,14 +187,17 @@ export function startSkin(source: ObservableSource<SkinConfig>): () => void {
     const animation = config.spin ? `${SPIN_KEYFRAMES} ${String(config.spinSeconds)}s linear infinite` : 'none'
 
     for (const element of document.querySelectorAll<HTMLElement>(RUNNING_SELECTOR)) {
-      const text = element.querySelector(TEXT_SELECTOR)
-      const content = text === null ? null : text.parentElement
-      if (text === null || content === null) continue
-
       const svg = element.querySelector('svg')
+      const content = contentRow(element, svg)
+      if (content === null) continue
+
       if (svg !== null) {
-        if (!hiddenSvgs.has(svg)) hiddenSvgs.set(svg, svg.style.display)
-        if (svg.style.display !== 'none') svg.style.display = 'none'
+        // Hide the whole built-in icon box, not just the glyph: the box keeps
+        // its width, which would otherwise leave a gap before the replacement.
+        const box: HTMLElement | SVGElement = svg.parentElement ?? svg
+        const target: HTMLElement | SVGElement = box === content ? svg : box
+        if (!hidden.has(target)) hidden.set(target, target.style.display)
+        if (target.style.display !== 'none') target.style.display = 'none'
       }
 
       const node = iconNode(content)
@@ -168,8 +213,34 @@ export function startSkin(source: ObservableSource<SkinConfig>): () => void {
       if (!tinted.has(element)) tinted.set(element, element.style.getPropertyValue(COLOR_PROPERTY))
       if (element.style.getPropertyValue(COLOR_PROPERTY) !== color) element.style.setProperty(COLOR_PROPERTY, color)
 
-      const heading = (element.querySelector(STATUS_TEXT_SELECTOR)?.textContent ?? '').replace(TRAILING_PUNCTUATION, '')
-      patchText(text, heading, config.text, written)
+      const status = element.querySelector(STATUS_TEXT_SELECTOR)
+      const heading = (status?.textContent ?? '').replace(TRAILING_PUNCTUATION, '')
+      // Both label copies, wherever the build puts them: a leaf element's text,
+      // and the attribute the highlight paints from. The screen-reader copy is
+      // skipped explicitly: it holds the same phrase and must stay untouched.
+      for (const target of [element, ...element.querySelectorAll('*')]) {
+        if (target === status || target.closest(STATUS_TEXT_SELECTOR) !== null) continue
+        if (target.childElementCount === 0) {
+          patchSlot(
+            target,
+            heading,
+            config.text,
+            () => target.textContent ?? '',
+            (next) => { target.textContent = next },
+            writtenText,
+          )
+        }
+        if (target.hasAttribute(SHIMMER_TEXT_ATTRIBUTE)) {
+          patchSlot(
+            target,
+            heading,
+            config.text,
+            () => target.getAttribute(SHIMMER_TEXT_ATTRIBUTE) ?? '',
+            (next) => { target.setAttribute(SHIMMER_TEXT_ATTRIBUTE, next) },
+            writtenAttribute,
+          )
+        }
+      }
     }
   }
 
@@ -194,16 +265,21 @@ export function startSkin(source: ObservableSource<SkinConfig>): () => void {
     stopped = true
     observer.disconnect()
     unsubscribe()
-    for (const [svg, display] of hiddenSvgs) {
-      if (svg.isConnected) svg.style.display = display
+    for (const [target, display] of hidden) {
+      if (target.isConnected) target.style.display = display
     }
     for (const [element, value] of tinted) {
       if (!element.isConnected) continue
       if (value === '') element.style.removeProperty(COLOR_PROPERTY)
       else element.style.setProperty(COLOR_PROPERTY, value)
     }
-    for (const [text, entry] of written) {
-      if (text.isConnected && text.textContent === entry.written) text.textContent = entry.original
+    for (const [target, entry] of writtenText) {
+      if (target.isConnected && target.textContent === entry.written) target.textContent = entry.original
+    }
+    for (const [target, entry] of writtenAttribute) {
+      if (target.isConnected && target.getAttribute(SHIMMER_TEXT_ATTRIBUTE) === entry.written) {
+        target.setAttribute(SHIMMER_TEXT_ATTRIBUTE, entry.original)
+      }
     }
     for (const node of document.querySelectorAll(`[${ICON_ATTRIBUTE}]`)) node.remove()
     style.remove()

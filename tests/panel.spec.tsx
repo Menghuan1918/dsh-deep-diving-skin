@@ -3,7 +3,7 @@
  * The configuration page, driven through the props the renderer hands it:
  * the derived `view`/`t` shares plus the injected settings face.
  */
-import { act, createElement, type ReactElement } from 'react'
+import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { zh } from '../src/client/locales.ts'
@@ -17,8 +17,8 @@ declare global {
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 /** Dictionary lookup with the same `{name}` interpolation the renderer's `t` uses. */
-function translate(key: keyof typeof zh, params?: Record<string, unknown>): string {
-  const template: string = zh[key]
+function translate(key: string, params?: Record<string, unknown>): string {
+  const template = (zh as Record<string, string>)[key] ?? key
   return template.replace(/\{(\w+)\}/g, (_match, name: string) => String(params?.[name] ?? ''))
 }
 
@@ -39,8 +39,8 @@ function setup(initial: SkinConfig = { ...DEFAULT_SKIN }): Harness {
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
-  const save = vi.fn(async (patch: Partial<SkinConfig>) => ({ ...snapshot, ...patch }))
-  const reset = vi.fn(async () => ({ ...DEFAULT_SKIN }))
+  const save = vi.fn(async (patch: Partial<SkinConfig>): Promise<SkinConfig> => ({ ...snapshot, ...patch }))
+  const reset = vi.fn(async (): Promise<SkinConfig> => ({ ...DEFAULT_SKIN }))
 
   const created: Harness = {
     root,
@@ -53,14 +53,16 @@ function setup(initial: SkinConfig = { ...DEFAULT_SKIN }): Harness {
     },
     render(overrides) {
       act(() => {
+        // The props object is exactly SkinPanelProps: no cast, so a shape the
+        // renderer would not supply fails to compile here.
         root.render(createElement(SkinPanel, {
           view: 'page',
-          useConfig: (selector: (config: SkinConfig) => unknown) => selector(snapshot),
+          useConfig: <S,>(selector: (config: SkinConfig) => S): S => selector(snapshot),
           t: translate,
           save,
           reset,
           ...overrides,
-        } as SkinPanelProps) as ReactElement)
+        }))
       })
     },
   }
@@ -114,6 +116,14 @@ describe('configuration page', () => {
     const current = setup()
     current.render({ view: 'summary' })
     expect(current.container.textContent).toBe(zh.summary)
+  })
+
+  it('renders the form for the Settings section, which passes no view', () => {
+    const current = harness!
+    current.render({ view: undefined })
+    expect(inputByValue(current.container, DEFAULT_SKIN.text)).toBeInstanceOf(HTMLInputElement)
+    expect(current.container.querySelector('input[type="file"]')).not.toBeNull()
+    expect(current.container.textContent).not.toBe(zh.summary)
   })
 
   it('saves an edited draft', async () => {

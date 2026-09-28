@@ -7,7 +7,7 @@ import { type SkinConfig } from './skin-config.ts';
 export declare function skinConfigPath(home?: string): string;
 /**
  * Read the settings document. A missing, unreadable, or malformed document
- * resolves to the shipped preset field by field, so the skin always has a
+ * resolves to the defaults field by field, so there is always a usable
  * usable configuration.
  * @param file - absolute document path.
  * @returns the stored configuration, or the defaults.

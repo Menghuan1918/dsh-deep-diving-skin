@@ -1,7 +1,8 @@
 {
   "name": "dsh-deep-diving-skin",
   "version": "0.1.0",
-  "description": "DSH Web skin: replace the running-status icon, text and color (「深度求索中，用时 16分0秒…」). Ships a spinning taiji + 「少女祈祷中」 + red by default.",
+  "description": "替换 DSH 运行状态行（「深度求索中，用时 …」）的图标、文本与颜色；默认图标为旋转太极，默认文本「少女祈祷中」，默认颜色为红色。",
+  "icon": "./icon.svg",
   "keywords": [
     "dsh",
     "dsh-plugin",
@@ -48,6 +49,7 @@
     "lib",
     "src",
     "cordis.patch.yml",
+    "icon.svg",
     "README.md",
     "README.zh.md",
     "LICENSE"
@@ -68,6 +70,7 @@
     "@deepseek-ai/dsh-client-store": "0.2.0-rc.1",
     "@deepseek-ai/dsh-client-ui-plugin-manager": "0.2.0-rc.1",
     "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.1",
     "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.1",
     "@deepseek-ai/dsh-host-webserver": "0.2.0-rc.1",
     "@types/node": "^22.10.0",

@@ -1,6 +1,6 @@
 /**
- * The default icon: the Touhou loading-screen taiji, as a self-contained SVG
- * data URI. Geometry (viewBox 0 0 100 100):
+ * The default icon: a yin-yang as a self-contained SVG data URI.
+ * Geometry (viewBox 0 0 100 100):
  *
  * - outer disc r=49, white with a dark rim;
  * - the filled half is bounded by the outer circle's LEFT arc from (50,1) to
@@ -9,7 +9,7 @@
  *   (50,25.5)) bulging left, which is the classic S;
  * - each lobe carries its counter-coloured eye at its circle's centre.
  */
-/** The default taiji markup. Kept as markup so the data URI is generated safely. */
+/** The default icon markup. Kept as markup so the data URI is generated safely. */
 export declare const DEFAULT_ICON_SVG: string;
 /**
  * Percent-encode SVG markup into a data URI. `encodeURIComponent` leaves

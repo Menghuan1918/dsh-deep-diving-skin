@@ -30,7 +30,7 @@ export const SPIN_SECONDS_MAX = 60
 
 /** Everything the settings page can change. */
 export interface SkinConfig {
-  /** Icon source: the empty string selects the built-in taiji. */
+  /** Icon source: the empty string selects the bundled default icon. */
   readonly icon: string
   /** Text replacing the localized "deep diving" phrase; the elapsed-time suffix is kept. */
   readonly text: string
@@ -42,7 +42,7 @@ export interface SkinConfig {
   readonly spinSeconds: number
 }
 
-/** The shipped preset: a spinning taiji + 「少女祈祷中」 + red. */
+/** The shipped defaults. */
 export const DEFAULT_SKIN: SkinConfig = {
   icon: '',
   text: '少女祈祷中',

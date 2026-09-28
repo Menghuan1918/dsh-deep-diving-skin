@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 /**
- * The skin against the markup the running dsh 0.2.0-rc.1 bundle renders. The
- * fixture is a verbatim structural copy of
- * `@deepseek-ai/dsh-client-ui-chat`'s `RunningStatus` output, including the
- * hashed CSS-Module class names (`<hash>_<local>`).
+ * The skin against the markup the running GUI actually renders. The fixture is
+ * a copy of a real `[data-chat-running]` element: the whale `<svg>`, and the
+ * `TextShimmer` subtree whose label exists TWICE — as the visible leaf's text
+ * and as the `data-shimmer-text` attribute the highlight paints with
+ * `content: attr(data-shimmer-text)`.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_ICON_URI } from '../src/client/art.ts'
@@ -12,6 +13,32 @@ import { DEFAULT_SKIN, type SkinConfig } from '../src/skin-config.ts'
 
 const ICON_ATTRIBUTE = 'data-dsh-deep-diving-skin-icon'
 const COLOR_PROPERTY = '--dsw-alias-label-deep-diving'
+const SHIMMER_TEXT_ATTRIBUTE = 'data-shimmer-text'
+
+const WHALE_PATH = 'M8.844 13.742C8.967 12.328 8.45 10.4 8.45 9.65C8.45 8.94 8.88 8.43 9.6 8.43Z'
+
+/** Markup of the running-status line, as the running build emits it. */
+function runningMarkup(label: string, status = '深度求索中...'): string {
+  return [
+    '<div class="EvIC1a_running" data-chat-running="true">',
+    `<span class="TTCZqG_visuallyHidden" role="status" aria-live="polite" aria-atomic="true">${status}</span>`,
+    '<span class="EvIC1a_runningDivider" aria-hidden="true"></span>',
+    '<span class="EvIC1a_runningContent">',
+    '<span class="EvIC1a_runningIcon" aria-hidden="true">',
+    `<svg width="100%" height="100%" viewBox="0 0 16 16" fill="none"><path class="EvIC1a_runningWhaleAnimated" d="${WHALE_PATH}" stroke="currentColor" stroke-width="1"><animate attributeName="d" values="${WHALE_PATH}" dur="3s" repeatCount="indefinite"></animate></path><path class="EvIC1a_runningWhaleStill" d="${WHALE_PATH}" stroke="currentColor" stroke-width="1"></path></svg>`,
+    '</span>',
+    '<span class="_root_1rdzk_1 EvIC1a_runningText" data-shimmer="true">',
+    `<span class="_content_1rdzk_11"><span class="_text_1rdzk_17">${label}</span></span>`,
+    '<span class="_decoration_1rdzk_25" aria-hidden="true" inert="">',
+    '<span class="_sweep_1rdzk_34">',
+    `<span class="_content_1rdzk_11 _highlight_1rdzk_54"><span class="_text_1rdzk_17" ${SHIMMER_TEXT_ATTRIBUTE}="${label}"></span></span>`,
+    '</span>',
+    '</span>',
+    '</span>',
+    '</span>',
+    '</div>',
+  ].join('')
+}
 
 /**
  * Disposers started by a test, so a failing assertion cannot leave an observer
@@ -28,20 +55,6 @@ function start(source: ObservableSource<SkinConfig>): () => void {
   }
   live.add(tracked)
   return tracked
-}
-
-/** Markup of the running-status line, as the shipped client renders it. */
-function runningMarkup(label: string, status = '深度求索中...'): string {
-  return [
-    '<div class="EvIC1a_running" data-chat-running>',
-    `<span class="a11y_visuallyHidden" role="status" aria-live="polite" aria-atomic="true">${status}</span>`,
-    '<span class="EvIC1a_runningDivider" aria-hidden="true"></span>',
-    '<span class="EvIC1a_runningContent">',
-    '<span class="EvIC1a_runningIcon" aria-hidden="true"><svg width="100%" height="100%" viewBox="0 0 16 16" fill="none"><path d="M8.844 13.742" stroke="currentColor" stroke-width="1"/></svg></span>',
-    `<span class="EvIC1a_runningText" data-text-shimmer="true">${label}</span>`,
-    '</span>',
-    '</div>',
-  ].join('')
 }
 
 /** A stand-in for the store's observable source. */
@@ -78,8 +91,24 @@ function iconElement(): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[${ICON_ATTRIBUTE}]`)
 }
 
-function labelElement(): HTMLElement {
-  return document.querySelector<HTMLElement>('[data-text-shimmer]')!
+/** The visible label leaf, found the same way the patcher finds it. */
+function visibleLabel(): HTMLElement {
+  const found = [...runningElement().querySelectorAll<HTMLElement>('span')].find(
+    node => node.childElementCount === 0
+      && node.textContent !== ''
+      // The screen-reader copy is a leaf with text too; the visible label is not it.
+      && node.getAttribute('role') !== 'status'
+      && !node.hasAttribute(SHIMMER_TEXT_ATTRIBUTE),
+  )
+  if (found === undefined) throw new Error('fixture is missing the visible label')
+  return found
+}
+
+/** The highlight copy, which paints from its attribute. */
+function highlightLabel(): HTMLElement {
+  const found = runningElement().querySelector<HTMLElement>(`[${SHIMMER_TEXT_ATTRIBUTE}]`)
+  if (found === null) throw new Error('fixture is missing the highlight label')
+  return found
 }
 
 beforeEach(() => {
@@ -92,21 +121,21 @@ afterEach(() => {
 })
 
 describe('running-status skin', () => {
-  it('applies the shipped preset over the built-in whale and copy', () => {
-    const { source } = sourceOf({ ...DEFAULT_SKIN })
-    const dispose = start(source)
+  it('replaces the icon, both label copies and the colour', () => {
+    const dispose = start(sourceOf({ ...DEFAULT_SKIN }).source)
 
     const icon = iconElement()
     expect(icon).not.toBeNull()
     expect(icon!.style.backgroundImage).toBe(`url(${DEFAULT_ICON_URI})`)
     expect(icon!.style.animation).toContain('3s')
     expect(icon!.getAttribute('aria-hidden')).toBe('true')
-    // The replacement heads the flex row, where the built-in icon sat.
-    expect(icon!.parentElement?.querySelector('svg')).not.toBeNull()
     expect(icon!.parentElement?.firstElementChild).toBe(icon)
 
-    expect(document.querySelector('svg')!.style.display).toBe('none')
-    expect(labelElement().textContent).toBe('少女祈祷中，用时 16分0秒...')
+    // The built-in icon box is hidden, glyph and all.
+    expect(document.querySelector<HTMLElement>('.EvIC1a_runningIcon')!.style.display).toBe('none')
+
+    expect(visibleLabel().textContent).toBe('少女祈祷中，用时 16分0秒...')
+    expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe('少女祈祷中，用时 16分0秒...')
     // The screen-reader copy stays the harness's own wording.
     expect(document.querySelector('[role="status"]')!.textContent).toBe('深度求索中...')
     expect(runningElement().style.getPropertyValue(COLOR_PROPERTY)).toBe('#e60012')
@@ -126,7 +155,8 @@ describe('running-status skin', () => {
 
     expect(iconElement()!.style.backgroundImage).toBe(`url(${custom.icon})`)
     expect(iconElement()!.style.animation).toBe('none')
-    expect(labelElement().textContent).toBe('祈祷中，用时 16分0秒...')
+    expect(visibleLabel().textContent).toBe('祈祷中，用时 16分0秒...')
+    expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe('祈祷中，用时 16分0秒...')
     expect(runningElement().style.getPropertyValue(COLOR_PROPERTY)).toBe('#3366ff')
 
     dispose()
@@ -134,13 +164,15 @@ describe('running-status skin', () => {
 
   it('re-applies after React rewrites the label on a clock tick', async () => {
     const dispose = start(sourceOf({ ...DEFAULT_SKIN }).source)
-    expect(labelElement().textContent).toBe('少女祈祷中，用时 16分0秒...')
+    expect(visibleLabel().textContent).toBe('少女祈祷中，用时 16分0秒...')
 
-    // React's next tick: setTextContent with the freshly localized label.
-    labelElement().textContent = '深度求索中，用时 16分1秒...'
+    // React's next tick: fresh text on one copy, fresh attribute on the other.
+    visibleLabel().textContent = '深度求索中，用时 16分1秒...'
+    highlightLabel().setAttribute(SHIMMER_TEXT_ATTRIBUTE, '深度求索中，用时 16分1秒...')
     await settle()
 
-    expect(labelElement().textContent).toBe('少女祈祷中，用时 16分1秒...')
+    expect(visibleLabel().textContent).toBe('少女祈祷中，用时 16分1秒...')
+    expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe('少女祈祷中，用时 16分1秒...')
     dispose()
   })
 
@@ -149,7 +181,7 @@ describe('running-status skin', () => {
     iconElement()!.remove()
     expect(iconElement()).toBeNull()
 
-    await new Promise<void>((resolve) => { setTimeout(resolve, 0) })
+    await settle()
 
     expect(iconElement()).not.toBeNull()
     dispose()
@@ -163,7 +195,8 @@ describe('running-status skin', () => {
     publish({ ...DEFAULT_SKIN, text: '少女祈祷中！', color: 'red' })
     await settle()
 
-    expect(labelElement().textContent).toBe('少女祈祷中！，用时 16分0秒...')
+    expect(visibleLabel().textContent).toBe('少女祈祷中！，用时 16分0秒...')
+    expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe('少女祈祷中！，用时 16分0秒...')
     expect(runningElement().style.getPropertyValue(COLOR_PROPERTY)).toBe('red')
     dispose()
   })
@@ -175,7 +208,8 @@ describe('running-status skin', () => {
 
     expect(document.querySelectorAll(`[${ICON_ATTRIBUTE}]`)).toHaveLength(1)
     expect(document.querySelectorAll('style[data-dsh-deep-diving-skin-style]')).toHaveLength(1)
-    expect(labelElement().textContent).toBe('少女祈祷中，用时 16分0秒...')
+    expect(visibleLabel().textContent).toBe('少女祈祷中，用时 16分0秒...')
+    expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe('少女祈祷中，用时 16分0秒...')
     dispose()
   })
 
@@ -183,7 +217,8 @@ describe('running-status skin', () => {
     document.body.innerHTML = runningMarkup('完全不同的一句话', '深度求索中...')
     const dispose = start(sourceOf({ ...DEFAULT_SKIN }).source)
 
-    expect(labelElement().textContent).toBe('完全不同的一句话')
+    expect(visibleLabel().textContent).toBe('完全不同的一句话')
+    expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe('完全不同的一句话')
     dispose()
   })
 
@@ -199,14 +234,16 @@ describe('running-status skin', () => {
   it('retracts every write on dispose', () => {
     const dispose = start(sourceOf({ ...DEFAULT_SKIN }).source)
     expect(iconElement()).not.toBeNull()
+    const original = '深度求索中，用时 16分0秒...'
 
     dispose()
 
     expect(iconElement()).toBeNull()
     expect(document.querySelector('style[data-dsh-deep-diving-skin-style]')).toBeNull()
-    expect(document.querySelector('svg')!.style.display).toBe('')
+    expect(document.querySelector<HTMLElement>('.EvIC1a_runningIcon')!.style.display).toBe('')
     expect(runningElement().style.getPropertyValue(COLOR_PROPERTY)).toBe('')
-    expect(labelElement().textContent).toBe('深度求索中，用时 16分0秒...')
+    expect(visibleLabel().textContent).toBe(original)
+    expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe(original)
   })
 
   it('patches every running-status line on the page', () => {
@@ -214,7 +251,8 @@ describe('running-status skin', () => {
     const dispose = start(sourceOf({ ...DEFAULT_SKIN }).source)
 
     expect(document.querySelectorAll(`[${ICON_ATTRIBUTE}]`)).toHaveLength(2)
-    expect([...document.querySelectorAll('[data-text-shimmer]')].map(node => node.textContent))
+    expect([...document.querySelectorAll<HTMLElement>(`[${SHIMMER_TEXT_ATTRIBUTE}]`)]
+      .map(node => node.getAttribute(SHIMMER_TEXT_ATTRIBUTE)))
       .toEqual(['少女祈祷中，用时 1分0秒...', '少女祈祷中...'])
     dispose()
   })

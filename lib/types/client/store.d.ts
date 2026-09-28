@@ -3,7 +3,7 @@
  *
  * The host document is authoritative; this module keeps one snapshot of it, an
  * observable source for the renderer's `hooks` compartment, and the two write
- * paths. A failed read leaves the shipped preset in place rather than blanking
+ * paths. A failed read leaves the defaults in place rather than blanking
  * the skin, because the plugin's job is to look like something.
  */
 import { type SkinConfig } from '../skin-config.ts';
@@ -12,7 +12,7 @@ import type { ObservableSource } from './patcher.ts';
 export interface SkinStore {
     /** Current configuration; identity changes only when the value does. */
     readonly config: ObservableSource<SkinConfig>;
-    /** Read the host document, keeping the shipped preset when it is unreachable. */
+    /** Read the host document, keeping the defaults when it is unreachable. */
     load(): Promise<void>;
     /**
      * Write a configuration.
@@ -20,7 +20,7 @@ export interface SkinStore {
      * @returns the configuration the host accepted.
      */
     save(patch: Partial<SkinConfig>): Promise<SkinConfig>;
-    /** Restore every field to the shipped preset. */
+    /** Restore every field to the shipped defaults. */
     reset(): Promise<SkinConfig>;
 }
 /**
