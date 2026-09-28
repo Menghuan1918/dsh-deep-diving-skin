@@ -28,7 +28,7 @@
  * layout degrades to "the skin does nothing" rather than a broken page.
  */
 import { resolveIconSource } from './art.ts'
-import { DEFAULT_SKIN, type SkinConfig } from '../skin-config.ts'
+import { DEFAULT_SKIN, derivedShimmerColor, type SkinConfig } from '../skin-config.ts'
 
 /** The running-status element. */
 export const RUNNING_SELECTOR = '[data-chat-running]'
@@ -40,12 +40,18 @@ const SHIMMER_TEXT_ATTRIBUTE = 'data-shimmer-text'
 const STATUS_TEXT_SELECTOR = '[role="status"]'
 /** Marks the icon node this plugin inserted. */
 const ICON_ATTRIBUTE = 'data-dsh-deep-diving-skin-icon'
-/** The one CSS custom property the running line takes its colour from. */
+/** The CSS custom property the running line takes its colour from. */
 const COLOR_PROPERTY = '--dsw-alias-label-deep-diving'
+/** The CSS custom property the sweep band paints with. */
+const SHIMMER_COLOR_PROPERTY = '--dsw-alias-label-shimmer'
 /** Keyframes name injected by this plugin. */
 const SPIN_KEYFRAMES = 'dsh-deep-diving-skin-spin'
-/** Marks the stylesheet this plugin injected. */
-const STYLE_ATTRIBUTE = 'data-dsh-deep-diving-skin-style'
+/**
+ * Marks the keyframes sheet this plugin injected. Deliberately NOT the
+ * attribute `styles.ts` uses for the page stylesheet: two owners sharing one
+ * attribute is how the keyframes silently went missing once already.
+ */
+const STYLE_ATTRIBUTE = 'data-dsh-deep-diving-skin-spin'
 /** Ellipsis and whitespace ending the bare phrase. */
 const TRAILING_PUNCTUATION = /[.。…\s]+$/
 /** Matches the built-in icon box so a replacement occupies the same slot. */
@@ -171,7 +177,7 @@ function patchSlot(
 export function startSkin(source: ObservableSource<SkinConfig>): () => void {
   const style = ensureStyleTag()
   const hidden = new Map<HTMLElement | SVGElement, string>()
-  const tinted = new Map<HTMLElement, string>()
+  const tinted = new Map<HTMLElement, { color: string; shimmer: string }>()
   const writtenText = new Map<Element, Written>()
   const writtenAttribute = new Map<Element, Written>()
   // The exact source and animation already on a node. Reading them back would
@@ -184,6 +190,9 @@ export function startSkin(source: ObservableSource<SkinConfig>): () => void {
     const config = source.getSnapshot()
     const icon = resolveIconSource(config.icon)
     const color = usableColor(config.color)
+    // The sweep defaults to a tint of the text colour, so the shipped look
+    // never shows the theme's own shimmer blue against red text.
+    const shimmer = config.shimmerColor === '' ? derivedShimmerColor(color) : usableColor(config.shimmerColor)
     const animation = config.spin ? `${SPIN_KEYFRAMES} ${String(config.spinSeconds)}s linear infinite` : 'none'
 
     for (const element of document.querySelectorAll<HTMLElement>(RUNNING_SELECTOR)) {
@@ -210,8 +219,20 @@ export function startSkin(source: ObservableSource<SkinConfig>): () => void {
         node.style.animation = animation
       }
 
-      if (!tinted.has(element)) tinted.set(element, element.style.getPropertyValue(COLOR_PROPERTY))
+      // Both colours are painted from custom properties on this one element, so
+      // scope them here rather than restyling anything the theme owns.
+      let original = tinted.get(element)
+      if (original === undefined) {
+        original = {
+          color: element.style.getPropertyValue(COLOR_PROPERTY),
+          shimmer: element.style.getPropertyValue(SHIMMER_COLOR_PROPERTY),
+        }
+        tinted.set(element, original)
+      }
       if (element.style.getPropertyValue(COLOR_PROPERTY) !== color) element.style.setProperty(COLOR_PROPERTY, color)
+      if (element.style.getPropertyValue(SHIMMER_COLOR_PROPERTY) !== shimmer) {
+        element.style.setProperty(SHIMMER_COLOR_PROPERTY, shimmer)
+      }
 
       const status = element.querySelector(STATUS_TEXT_SELECTOR)
       const heading = (status?.textContent ?? '').replace(TRAILING_PUNCTUATION, '')
@@ -270,8 +291,10 @@ export function startSkin(source: ObservableSource<SkinConfig>): () => void {
     }
     for (const [element, value] of tinted) {
       if (!element.isConnected) continue
-      if (value === '') element.style.removeProperty(COLOR_PROPERTY)
-      else element.style.setProperty(COLOR_PROPERTY, value)
+      if (value.color === '') element.style.removeProperty(COLOR_PROPERTY)
+      else element.style.setProperty(COLOR_PROPERTY, value.color)
+      if (value.shimmer === '') element.style.removeProperty(SHIMMER_COLOR_PROPERTY)
+      else element.style.setProperty(SHIMMER_COLOR_PROPERTY, value.shimmer)
     }
     for (const [target, entry] of writtenText) {
       if (target.isConnected && target.textContent === entry.written) target.textContent = entry.original

@@ -36,6 +36,8 @@ export interface SkinConfig {
   readonly text: string
   /** CSS color of the running-status line. */
   readonly color: string
+  /** CSS color of the sweep that crosses the text; empty derives it from {@link color}. */
+  readonly shimmerColor: string
   /** Whether the icon rotates. */
   readonly spin: boolean
   /** Seconds per full rotation. */
@@ -47,8 +49,21 @@ export const DEFAULT_SKIN: SkinConfig = {
   icon: '',
   text: '少女祈祷中',
   color: '#e60012',
+  shimmerColor: '',
   spin: true,
   spinSeconds: 3,
+}
+
+/**
+ * Derive the sweep colour from the text colour, so the shipped look never
+ * falls back to the theme's own shimmer blue. Uses `color-mix`, which the
+ * theme's own sheets already rely on; a browser without it drops the
+ * declaration and keeps whatever the theme provided.
+ * @param color - the already-validated text colour.
+ * @returns a translucent tint of that colour.
+ */
+export function derivedShimmerColor(color: string): string {
+  return `color-mix(in oklab, ${color} 55%, transparent)`
 }
 
 /**
@@ -112,10 +127,14 @@ export function normalizeSkinConfig(value: unknown): SkinConfig {
     ? raw.text
     : DEFAULT_SKIN.text
   const color = typeof raw.color === 'string' && isColorValue(raw.color) ? raw.color : DEFAULT_SKIN.color
+  const shimmerColor = typeof raw.shimmerColor === 'string' && (raw.shimmerColor === '' || isColorValue(raw.shimmerColor))
+    ? raw.shimmerColor
+    : DEFAULT_SKIN.shimmerColor
   return {
     icon,
     text,
     color,
+    shimmerColor,
     spin: typeof raw.spin === 'boolean' ? raw.spin : DEFAULT_SKIN.spin,
     spinSeconds: clampSpinSeconds(raw.spinSeconds),
   }
@@ -144,6 +163,12 @@ export function skinConfigProblem(value: unknown): string | undefined {
   }
   if (raw.color !== undefined && (typeof raw.color !== 'string' || !isColorValue(raw.color))) {
     return `color must be a non-empty CSS color of at most ${String(COLOR_MAX_CHARS)} characters`
+  }
+  if (raw.shimmerColor !== undefined) {
+    if (typeof raw.shimmerColor !== 'string') return 'shimmerColor must be a string'
+    if (raw.shimmerColor !== '' && !isColorValue(raw.shimmerColor)) {
+      return `shimmerColor must be empty or a CSS color of at most ${String(COLOR_MAX_CHARS)} characters`
+    }
   }
   if (raw.spin !== undefined && typeof raw.spin !== 'boolean') return 'spin must be a boolean'
   if (raw.spinSeconds !== undefined && (typeof raw.spinSeconds !== 'number' || !Number.isFinite(raw.spinSeconds))) {

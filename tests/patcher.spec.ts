@@ -9,10 +9,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_ICON_URI } from '../src/client/art.ts'
 import { startSkin, type ObservableSource } from '../src/client/patcher.ts'
-import { DEFAULT_SKIN, type SkinConfig } from '../src/skin-config.ts'
+import { DEFAULT_SKIN, derivedShimmerColor, type SkinConfig } from '../src/skin-config.ts'
 
 const ICON_ATTRIBUTE = 'data-dsh-deep-diving-skin-icon'
 const COLOR_PROPERTY = '--dsw-alias-label-deep-diving'
+const SHIMMER_COLOR_PROPERTY = '--dsw-alias-label-shimmer'
 const SHIMMER_TEXT_ATTRIBUTE = 'data-shimmer-text'
 
 const WHALE_PATH = 'M8.844 13.742C8.967 12.328 8.45 10.4 8.45 9.65C8.45 8.94 8.88 8.43 9.6 8.43Z'
@@ -139,6 +140,9 @@ describe('running-status skin', () => {
     // The screen-reader copy stays the harness's own wording.
     expect(document.querySelector('[role="status"]')!.textContent).toBe('深度求索中...')
     expect(runningElement().style.getPropertyValue(COLOR_PROPERTY)).toBe('#e60012')
+    // The sweep follows the text colour, so it never shows the theme's blue.
+    expect(runningElement().style.getPropertyValue(SHIMMER_COLOR_PROPERTY))
+      .toBe(derivedShimmerColor('#e60012'))
 
     dispose()
   })
@@ -148,6 +152,7 @@ describe('running-status skin', () => {
       icon: 'data:image/gif;base64,R0lGODlhAQABAAAAACw=',
       text: '祈祷中',
       color: '#3366ff',
+      shimmerColor: '#ffd400',
       spin: false,
       spinSeconds: 1,
     }
@@ -158,6 +163,7 @@ describe('running-status skin', () => {
     expect(visibleLabel().textContent).toBe('祈祷中，用时 16分0秒...')
     expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe('祈祷中，用时 16分0秒...')
     expect(runningElement().style.getPropertyValue(COLOR_PROPERTY)).toBe('#3366ff')
+    expect(runningElement().style.getPropertyValue(SHIMMER_COLOR_PROPERTY)).toBe('#ffd400')
 
     dispose()
   })
@@ -207,7 +213,7 @@ describe('running-status skin', () => {
     await settle()
 
     expect(document.querySelectorAll(`[${ICON_ATTRIBUTE}]`)).toHaveLength(1)
-    expect(document.querySelectorAll('style[data-dsh-deep-diving-skin-style]')).toHaveLength(1)
+    expect(document.querySelectorAll('style[data-dsh-deep-diving-skin-spin]')).toHaveLength(1)
     expect(visibleLabel().textContent).toBe('少女祈祷中，用时 16分0秒...')
     expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe('少女祈祷中，用时 16分0秒...')
     dispose()
@@ -239,9 +245,10 @@ describe('running-status skin', () => {
     dispose()
 
     expect(iconElement()).toBeNull()
-    expect(document.querySelector('style[data-dsh-deep-diving-skin-style]')).toBeNull()
+    expect(document.querySelector('style[data-dsh-deep-diving-skin-spin]')).toBeNull()
     expect(document.querySelector<HTMLElement>('.EvIC1a_runningIcon')!.style.display).toBe('')
     expect(runningElement().style.getPropertyValue(COLOR_PROPERTY)).toBe('')
+    expect(runningElement().style.getPropertyValue(SHIMMER_COLOR_PROPERTY)).toBe('')
     expect(visibleLabel().textContent).toBe(original)
     expect(highlightLabel().getAttribute(SHIMMER_TEXT_ATTRIBUTE)).toBe(original)
   })

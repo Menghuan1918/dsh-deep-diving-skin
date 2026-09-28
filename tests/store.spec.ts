@@ -29,6 +29,9 @@ describe('configuration contract', () => {
     expect(normalizeSkinConfig({ text: '祈祷中' })).toEqual({ ...DEFAULT_SKIN, text: '祈祷中' })
     expect(normalizeSkinConfig({ icon: 'javascript:alert(1)' })).toEqual(DEFAULT_SKIN)
     expect(normalizeSkinConfig({ icon: 'https://example.com/a.svg' }).icon).toBe('https://example.com/a.svg')
+    expect(normalizeSkinConfig({}).shimmerColor).toBe('')
+    expect(normalizeSkinConfig({ shimmerColor: '#ffd400' }).shimmerColor).toBe('#ffd400')
+    expect(normalizeSkinConfig({ shimmerColor: 42 }).shimmerColor).toBe('')
   })
 
   it('bounds the rotation period', () => {
@@ -55,6 +58,9 @@ describe('configuration contract', () => {
     expect(skinConfigProblem({ color: '' })).toContain('color must be')
     expect(skinConfigProblem({ spinSeconds: 'fast' })).toBe('spinSeconds must be a number')
     expect(skinConfigProblem({ text: 'ok', color: '#fff' })).toBeUndefined()
+    expect(skinConfigProblem({ shimmerColor: '' })).toBeUndefined()
+    expect(skinConfigProblem({ shimmerColor: '#ffd400' })).toBeUndefined()
+    expect(skinConfigProblem({ shimmerColor: 42 })).toBe('shimmerColor must be a string')
   })
 })
 

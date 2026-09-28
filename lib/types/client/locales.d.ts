@@ -17,6 +17,9 @@ export declare const zh: {
     readonly textHint: "替换「深度求索中」，后面的「用时 …」保持不变。";
     readonly colorLabel: "颜色";
     readonly colorHint: "作用于这一行文字。";
+    readonly shimmerLabel: "高亮扫光";
+    readonly shimmerHint: "扫过文字的那道亮带的颜色。留空则跟随上面的颜色。";
+    readonly shimmerFollow: "跟随文本颜色";
     readonly spinLabel: "旋转图标";
     readonly spinSecondsLabel: "旋转周期（秒）";
     readonly spinSecondsHint: "0.2 – 60 秒转一圈。";

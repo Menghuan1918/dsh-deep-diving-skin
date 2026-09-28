@@ -32,6 +32,7 @@ Two entry points, one page:
 | Icon | Upload SVG / GIF / WebP / PNG (stored as a data URI, ≤ 1 MiB), or type an `https://` URL or `/path`. |
 | Text | Replaces the 「深度求索中」 phrase only; the 「用时 …」 suffix keeps ticking. |
 | Colour | Colour of that line's text. |
+| Highlight sweep | Colour of the band that sweeps across the text. Empty follows the text colour. |
 | Rotate / period | Whether the icon spins, and seconds per turn (0.2–60). |
 
 Configuration lives in `<DSH_HOME>/deep-diving-skin.json`.

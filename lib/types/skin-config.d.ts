@@ -33,6 +33,8 @@ export interface SkinConfig {
     readonly text: string;
     /** CSS color of the running-status line. */
     readonly color: string;
+    /** CSS color of the sweep that crosses the text; empty derives it from {@link color}. */
+    readonly shimmerColor: string;
     /** Whether the icon rotates. */
     readonly spin: boolean;
     /** Seconds per full rotation. */
@@ -40,6 +42,15 @@ export interface SkinConfig {
 }
 /** The shipped defaults. */
 export declare const DEFAULT_SKIN: SkinConfig;
+/**
+ * Derive the sweep colour from the text colour, so the shipped look never
+ * falls back to the theme's own shimmer blue. Uses `color-mix`, which the
+ * theme's own sheets already rely on; a browser without it drops the
+ * declaration and keeps whatever the theme provided.
+ * @param color - the already-validated text colour.
+ * @returns a translucent tint of that colour.
+ */
+export declare function derivedShimmerColor(color: string): string;
 /**
  * Whether a non-empty icon source may be used as a CSS image.
  * @param value - candidate icon source.

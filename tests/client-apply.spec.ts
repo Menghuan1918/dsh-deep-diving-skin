@@ -113,6 +113,10 @@ describe('client apply', () => {
 
     expect(harness.localeNamespaces).toEqual([SKIN_NS])
     expect(document.querySelector('style[data-dsh-deep-diving-skin-style]')).not.toBeNull()
+    // The keyframes the skin's animation names must exist. Both modules inject
+    // a sheet; a shared attribute once made the patcher skip its own and the
+    // icon silently stopped rotating.
+    expect(document.head.textContent).toContain('@keyframes dsh-deep-diving-skin-spin')
     expect(harness.effectLabels).toEqual([
       'deep-diving-skin: dictionaries',
       'deep-diving-skin: settings stylesheet',

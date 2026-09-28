@@ -62,6 +62,14 @@ function hexColor(value: string): string {
 }
 
 /**
+ * The colour a picker shows for a field that may be empty. An empty sweep
+ * follows the text colour, so the picker shows that rather than a placeholder.
+ */
+function pickerColor(value: string, fallback: string): string {
+  return /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback
+}
+
+/**
  * Render the settings form.
  * @param props - the slot props plus the injected settings face.
  * @returns the row's one-line description, or the form.
@@ -191,6 +199,38 @@ export function SkinPanel({ view, useConfig, t, save, reset }: SkinPanelProps): 
             />
           </div>
           <p className="dds-hint">{t('colorHint')}</p>
+        </div>
+        <div className="dds-field">
+          <span className="dds-label">{t('shimmerLabel')}</span>
+          <div className="dds-row">
+            <input
+              className="dds-color"
+              type="color"
+              aria-label={t('shimmerLabel')}
+              value={pickerColor(draft.shimmerColor, hexColor(draft.color))}
+              onChange={(event) => { edit({ shimmerColor: event.target.value }) }}
+            />
+            <input
+              className="dds-input"
+              type="text"
+              value={draft.shimmerColor}
+              placeholder={t('shimmerFollow')}
+              onChange={(event) => { edit({ shimmerColor: event.target.value }) }}
+            />
+            {draft.shimmerColor === ''
+              ? null
+              : (
+                <button
+                  className="dds-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => { edit({ shimmerColor: '' }) }}
+                >
+                  {t('shimmerFollow')}
+                </button>
+              )}
+          </div>
+          <p className="dds-hint">{t('shimmerHint')}</p>
         </div>
       </section>
 
