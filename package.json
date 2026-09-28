@@ -56,8 +56,7 @@
     "build": "tsc -p tsconfig.build.json && tsdown",
     "typecheck": "tsc --noEmit",
     "test": "pnpm build && vitest run",
-    "test:watch": "vitest",
-    "prepare": "pnpm run build"
+    "test:watch": "vitest"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.4",

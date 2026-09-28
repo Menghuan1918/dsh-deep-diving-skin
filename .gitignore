@@ -1,4 +1,8 @@
 node_modules/
-lib/
 *.tgz
 .DS_Store
+
+# lib/ is committed on purpose: a `dsh plugin add github:…` install has no
+# build step (pnpm refuses a git dependency's prepare script unless every
+# consumer allowlists it), and the runtime loads lib/client.js straight from
+# the checkout. Run `pnpm build` and commit lib/ with any source change.

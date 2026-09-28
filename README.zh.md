@@ -48,4 +48,6 @@ pnpm test        # 先构建再跑测试
 pnpm typecheck
 ```
 
+`lib/` 是提交进仓库的：Git 安装没有构建步骤，改动源码后请跑 `pnpm build` 并把 `lib/` 一起提交。
+
 MIT

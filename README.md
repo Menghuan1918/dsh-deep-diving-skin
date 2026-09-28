@@ -48,4 +48,6 @@ pnpm test        # builds, then runs the suite
 pnpm typecheck
 ```
 
+`lib/` is committed: a Git install has no build step, so run `pnpm build` and commit `lib/` with any source change.
+
 MIT
