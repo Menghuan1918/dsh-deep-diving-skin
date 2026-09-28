@@ -6,7 +6,7 @@
 
 替换 DeepSeek Harness 运行状态行的图标、文本和颜色——就是那一行「深度求索中，用时 16分0秒…」。默认图标是旋转太极，默认文本「少女祈祷中」，默认颜色为红色。
 
-![效果图](docs/preview.png)
+<img width="424" height="88" alt="bf533ee17285e6f99d28483149bdc8f3" src="https://github.com/user-attachments/assets/52bcfde6-f608-4705-8644-8490c5c66be0" />
 
 ## 安装
 
